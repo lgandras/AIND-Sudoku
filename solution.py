@@ -44,37 +44,6 @@ def naked_twins(values):
     and because it is simpler (since the reduce_puzzle function already calls this
     strategy repeatedly).
     """
-    def each_comb_helper(elements, n, chosen):
-        if len(elements) < n:
-            return
-        if 0 == n:
-            yield chosen
-        else:
-            yield from each_comb_helper(elements[1:], n - 1, chosen + [elements[0]])
-            yield from each_comb_helper(elements[1:], n, chosen)
-
-    def each_comb(elements, n):
-        return each_comb_helper(elements, n, [])
-
-    def each_naked_twin_group(unit, eboxes, elements):
-        sboxes = eboxes[elements[0]]
-        for element in elements[1:]:
-            if eboxes[element] != sboxes:
-                return
-
-        yield (unit, sboxes, elements)
-
-    def each_naked_twin(values):
-        print("")
-        display(values)
-        for unit in unitlist:
-            if unit not in diagonal_units:
-                eboxes = {element: [box for box in unit if element in values[box]] for element in cols}
-                for n in range(2, 10):
-                    group = [element for element in eboxes if n == len(eboxes[element])]
-                    if 0 < len(group):
-                        for comb in each_comb(group, n):
-                            yield from each_naked_twin_group(unit, eboxes, comb)
 
     def exclude_from_box(values, box, elements):
         nval = ''
@@ -84,12 +53,15 @@ def naked_twins(values):
         values[box] = nval
         return values
 
-    for unit, sboxes, elements in each_naked_twin(values):
-        for box in unit:
-            values = exclude_from_box(values, box, list(set(cols) - set(elements)) if box in sboxes else elements)
+    for unit in unitlist:
+        if unit not in diagonal_units:
+            for i, box1 in enumerate(unit):
+                if 2 == len(values[box1]):
+                    for box2 in unit[i+1:]:
+                        if values[box1] == values[box2]:
+                            for box in unit:
+                                values = exclude_from_box(values, box, set(cols) - set(values[box1]) if box in (box1, box2) else values[box1])
 
-    print("")
-    display(values)
     return values
 
 
@@ -165,6 +137,7 @@ def reduce_puzzle(values):
 
         values = eliminate(values)
         values = only_choice(values)
+        values = naked_twins(values)
 
         # Check how many boxes have a determined value, to compare
         solved_values_after = len([box for box in values.keys() if len(values[box]) == 1])
